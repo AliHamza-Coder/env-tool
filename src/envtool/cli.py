@@ -147,14 +147,19 @@ def version():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if latest and latest != __version__:
-        core.console.print(f"\n[bold yellow]🔔 A new version is available: {latest}[/bold yellow]")
-        core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
-    elif latest == __version__:
-        core.console.print("[dim](You are on the latest version)[/dim]\n")
+    if latest and latest not in ["ssl_error", "limit"]:
+        if latest != __version__:
+            core.console.print(f"\n[bold yellow]🔔 A new version is available: {latest}[/bold yellow]")
+            core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
+        else:
+            core.console.print("[dim](You are on the latest version)[/dim]\n")
     else:
-        # If latest is None, it could be offline or a server error
-        if not core.is_online():
+        # Better error reporting
+        if latest == "ssl_error":
+            core.console.print("[dim](Version check skipped: SSL/Security Error)[/dim]\n")
+        elif latest == "limit":
+            core.console.print("[dim](Version check skipped: GitHub API Rate Limit)[/dim]\n")
+        elif not core.is_online():
             core.console.print("[dim](Version check skipped: Offline)[/dim]\n")
         else:
             core.console.print("[dim](Could not reach GitHub for updates)[/dim]\n")
@@ -177,9 +182,17 @@ def upgrade():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if not latest:
-        core.console.print("[bold red]❌ Network Error[/bold red]")
-        core.console.print("[yellow]Please connect to the internet to check for updates and upgrade Env Tool.[/yellow]")
+    if not latest or latest in ["ssl_error", "limit"]:
+        if latest == "ssl_error":
+            core.console.print("[bold red]❌ Security/SSL Error[/bold red]")
+            core.console.print("[yellow]Could not verify secure connection to GitHub. Check your system clock or firewall.[/yellow]")
+        elif latest == "limit":
+            core.console.print("[bold yellow]🔔 Rate Limit Reached[/bold yellow]")
+            core.console.print("[dim]GitHub API is temporarily limiting requests. Try again in a few minutes.[/dim]")
+        else:
+            core.console.print("[bold red]❌ Network Error[/bold red]")
+            core.console.print("[yellow]Please connect to the internet to check for updates and upgrade Env Tool.[/yellow]")
+        
         if not click.confirm("\nAttempt force-upgrade anyway?"):
             return
     elif latest == __version__:
@@ -194,7 +207,8 @@ def upgrade():
             return
 
     core.console.print("Updating via pip...")
-    core.run_command([sys.executable, "-m", "pip", "install", "--upgrade", "env-tool"])
+    # Force reinstall to ensure we get the latest even if version is same
+    core.run_command([sys.executable, "-m", "pip", "install", "--upgrade", "env-tool", "--no-cache-dir"])
     core.console.print("✅ [bold green]Upgrade command executed. Please restart your terminal to see changes.[/bold green]")
 
 @main.command()
