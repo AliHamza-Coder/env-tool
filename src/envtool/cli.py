@@ -14,16 +14,42 @@ def main(ctx, debug):
         core.console.print("\n[bold green]🐍 Env Tool - Setting up Environment[/bold green]")
         core.create_venv()
         core.upgrade_pip()
-        core.install_requirements()
+        
+        # Dependency confirmation
+        req_file = core.Path.cwd() / "requirements.txt"
+        if req_file.exists() and req_file.stat().st_size > 0:
+            if click.confirm("\n📦 requirements.txt found. Do you want to install dependencies?"):
+                core.install_requirements()
+        
         core.console.print("\n✅ [bold green]Environment Ready and Active.[/bold green]\n")
         
         # Activation tip
         if sys.platform == "win32":
-            core.console.print("Tip: To activate manually, run: [yellow]myenv\\Scripts\\activate[/yellow]")
+            core.console.print("Tip: To activate, run: [bold yellow]env a[/bold yellow]")
         else:
-            core.console.print("Tip: To activate manually, run: [yellow]source myenv/bin/activate[/yellow]")
+            core.console.print("Tip: To activate, run: [bold yellow]env a[/bold yellow]")
     else:
         pass
+
+@main.command()
+def a():
+    """Activate the virtual environment"""
+    venv_path = core.get_venv_path()
+    if not venv_path.exists():
+        core.console.print("[bold red]Venv not found.[/bold red] Run [bold cyan]env[/bold cyan] first to create it.")
+        return
+
+    core.console.print("\n🐍 [bold green]Activation Command:[/bold green]")
+    if sys.platform == "win32":
+        core.console.print(f"[bold yellow].\\{core.ENV_NAME}\\Scripts\\activate[/bold yellow]\n")
+    else:
+        core.console.print(f"[bold yellow]source ./{core.ENV_NAME}/bin/activate[/bold yellow]\n")
+
+@main.command()
+def d():
+    """Deactivate the virtual environment"""
+    core.console.print("\n🐍 [bold red]Deactivation Command:[/bold red]")
+    core.console.print("[bold yellow]deactivate[/bold yellow]\n")
 
 @main.command()
 def help_cmd():

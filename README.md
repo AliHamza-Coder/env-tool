@@ -3,7 +3,7 @@
   <img src="https://img.shields.io/github/languages/code-size/AliHamza-Coder/env-tool?color=green&style=for-the-badge" alt="Code Size" />
   <img src="https://img.shields.io/github/last-commit/AliHamza-Coder/env-tool?color=orange&style=for-the-badge" alt="Last Commit" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=for-the-badge" alt="Platform" />
-  <img src="https://img.shields.io/badge/version-1.2.0-blue?style=for-the-badge" alt="Version" />
+  <img src="https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge" alt="Version" />
 </div>
 
 <br />
@@ -56,7 +56,9 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 
 | Command         | Description                                                                      | Usage                   |
 | --------------- | -------------------------------------------------------------------------------- | ----------------------- |
-| `env`           | **Magic Setup**: Creates venv, upgrades pip, and installs dependencies.          | `env`                   |
+| `env`           | **Magic Setup**: Creates venv, upgrades pip, and alerts for dependencies.        | `env`                   |
+| `env a`         | **Activate**: Get the activation command for your current shell.                 | `env a`                 |
+| `env d`         | **Deactivate**: Get the deactivation command.                                    | `env d`                 |
 | `env run`       | **Direct Execute**: Run any command inside the venv without activating.          | `env run python app.py` |
 | `env init`      | **Project Bootstrap**: Automatically creates `src/`, `tests/`, and `.gitignore`. | `env init`              |
 | `env clean`     | **Deep Reset**: Safely delete `myenv` and all `__pycache__` folders.             | `env clean`             |
@@ -71,19 +73,15 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 
 ### 1. Smart Update Notifications
 
-Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available.
+Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available, even with robust offline handling.
 
 ### 2. Live Progress Monitoring
 
 Powered by **Rich**, Env Tool provides beautiful terminal spinners and status indicators, so you always know exactly what's happening backstage.
 
-### 3. The `--debug` Flag
+### 3. Dependency Controls
 
-For power users and contributors. Run any command with `--debug` to get granular logs and full stack traces.
-
-```bash
-env --debug update
-```
+No more accidental installations. Env Tool detects your `requirements.txt` and **asks for your confirmation** before installing anything.
 
 ---
 
@@ -97,9 +95,17 @@ Just navigate to any directory and type:
 env
 ```
 
-It handles the venv creation, pip upgrade, and `requirements.txt` installation in one go.
+It handles the venv creation and pip upgrade. If a `requirements.txt` is found, it will ask if you want to install them.
 
-### 2. No-Activation Workflow
+### 2. Quick Activation
+
+Need to activate your shell?
+
+```bash
+env a
+```
+
+### 3. No-Activation Workflow
 
 Forget `source myenv/bin/activate`. Just run your code directly:
 
@@ -107,7 +113,7 @@ Forget `source myenv/bin/activate`. Just run your code directly:
 env run python main.py
 ```
 
-### 3. Reset & Refresh
+### 4. Reset & Refresh
 
 Need to clear your local environment files?
 

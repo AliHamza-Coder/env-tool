@@ -170,10 +170,13 @@ def init_project():
 def check_latest_version():
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=3) # Faster timeout for better offline experience
         if response.status_code == 200:
             data = response.json()
             return data.get("tag_name", "").lstrip("v")
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        if DEBUG_MODE:
+            console.print("[dim]Offline: Skipping version check.[/dim]")
     except Exception as e:
         if DEBUG_MODE:
             console.print(f"[dim]Version check failed: {e}[/dim]")
