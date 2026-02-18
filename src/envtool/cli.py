@@ -135,8 +135,9 @@ def upgrade():
         latest = core.check_latest_version()
     
     if not latest:
-        core.console.print("[yellow]Could not fetch latest version info. Please check your internet connection.[/yellow]")
-        if not click.confirm("Do you want to attempt upgrade anyway?"):
+        core.console.print("[bold red]❌ Network Error[/bold red]")
+        core.console.print("[yellow]Please connect to the internet to check for updates and upgrade Env Tool.[/yellow]")
+        if not click.confirm("\nAttempt force-upgrade anyway?"):
             return
     elif latest == __version__:
         core.console.print(f"[green]You are already on the latest version ({__version__}).[/green]")

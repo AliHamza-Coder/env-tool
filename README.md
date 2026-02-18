@@ -76,11 +76,15 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 
 Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available, even with robust offline handling.
 
-### 2. Live Progress Monitoring
+### 2. Offline Ready
+
+Env Tool is designed for developers on the move. Most features (venv creation, project init, clean, run) work perfectly offline. Network tasks like version checks and pip upgrades are gracefully skipped if no connection is detected.
+
+### 3. Live Progress Monitoring
 
 Powered by **Rich**, Env Tool provides beautiful terminal spinners and status indicators, so you always know exactly what's happening backstage.
 
-### 3. Dependency Controls
+### 4. Dependency Controls
 
 No more accidental installations. Env Tool detects your `requirements.txt` and **asks for your confirmation** before installing anything.
 

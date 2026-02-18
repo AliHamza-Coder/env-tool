@@ -62,6 +62,10 @@ def run_command(args, capture_output=False, shell=False):
         return None
 
 def upgrade_pip():
+    if not is_online():
+        if DEBUG_MODE: console.print("[dim]Offline: Skipping pip upgrade.[/dim]")
+        return
+        
     python_exe = get_python_exe()
     with console.status("[bold yellow]Upgrading pip...", spinner="dots"):
         run_command([str(python_exe), "-m", "pip", "install", "--upgrade", "pip"])
@@ -72,6 +76,11 @@ def install_requirements():
         req_file.touch()
     
     if req_file.stat().st_size > 0:
+        if not is_online():
+            console.print("[bold red]❌ Offline Mode Detected[/bold red]")
+            console.print("[yellow]Please connect to the internet to install dependencies from requirements.txt.[/yellow]")
+            return
+            
         with console.status("[bold yellow]Installing dependencies...", spinner="dots"):
             pip_exe = get_pip_exe()
             run_command([str(pip_exe), "install", "-r", str(req_file)])
@@ -167,16 +176,27 @@ def init_project():
     else:
         console.print("Project already initialized.")
 
+def is_online():
+    """Quick check if internet is accessible"""
+    try:
+        # Check against a reliable public DNS IP (Cloudflare) on port 53
+        import socket
+        socket.create_connection(("1.1.1.1", 53), timeout=2)
+        return True
+    except OSError:
+        pass
+    return False
+
 def check_latest_version():
+    if not is_online():
+        return None
+        
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     try:
-        response = requests.get(url, timeout=3) # Faster timeout for better offline experience
+        response = requests.get(url, timeout=3)
         if response.status_code == 200:
             data = response.json()
             return data.get("tag_name", "").lstrip("v")
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-        if DEBUG_MODE:
-            console.print("[dim]Offline: Skipping version check.[/dim]")
     except Exception as e:
         if DEBUG_MODE:
             console.print(f"[dim]Version check failed: {e}[/dim]")
