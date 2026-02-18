@@ -39,66 +39,81 @@ curl -sSL https://raw.githubusercontent.com/AliHamza-Coder/env-tool/main/install
 
 ## 🌟 Why Env Tool?
 
-Env Tool automates the tedious parts of Python development. Whether you're on Windows, Linux, or macOS, the experience is identical.
+Env Tool automates the tedious parts of Python development. Whether you're on Windows, Linux, or macOS, the experience is identical and lightning fast.
 
-| Feature         |    Env Tool     |      Manual Method      |
-| --------------- | :-------------: | :---------------------: |
-| venv Creation   |    ✅ `env`     | ❌ `python -m venv ...` |
-| Auto-activation |     ✅ Yes      |    ❌ Path specific     |
-| Pip Upgrade     |     ✅ Auto     |        ❌ Manual        |
-| Dependency Sync | ✅ `env update` |      ❌ Many steps      |
-| Cross-Platform  |     ✅ Yes      |     ❌ Script heavy     |
+| Feature             |   Env Tool   |         Manual Method         |
+| ------------------- | :----------: | :---------------------------: |
+| venv Creation       |   ✅ `env`   |    ❌ `python -m venv ...`    |
+| Direct Execution    | ✅ `env run` | ❌ `source ... && python ...` |
+| Auto-activation     |    ✅ Yes    |       ❌ Path specific        |
+| Pip & Tools Upgrade |   ✅ Auto    |           ❌ Manual           |
+| Smart Notifications |    ✅ Yes    |     ❌ Outdated packages      |
+| Cross-Platform      |    ✅ Yes    |    ❌ OS specific scripts     |
 
 ---
 
 ## 🎯 Commands
 
-| Command           | Description                                                             | Usage             |
-| ----------------- | ----------------------------------------------------------------------- | ----------------- |
-| `env`             | **Magic Setup**: Creates venv, upgrades pip, and installs dependencies. | `env`             |
-| `env freeze`      | **Dependency Lock**: Quickly export all packages to `requirements.txt`. | `env freeze`      |
-| `env update`      | **Power Sync**: Synchronize and upgrade all packages at once.           | `env update`      |
-| `env version`     | **System Info**: Get detailed version info for Env Tool and Python.     | `env version`     |
-| `env self-update` | **Auto-Upgrade**: Keep Env Tool itself on the cutting edge.             | `env self-update` |
+| Command         | Description                                                                      | Usage                   |
+| --------------- | -------------------------------------------------------------------------------- | ----------------------- |
+| `env`           | **Magic Setup**: Creates venv, upgrades pip, and installs dependencies.          | `env`                   |
+| `env run`       | **Direct Execute**: Run any command inside the venv without activating.          | `env run python app.py` |
+| `env init`      | **Project Bootstrap**: Automatically creates `src/`, `tests/`, and `.gitignore`. | `env init`              |
+| `env clean`     | **Deep Reset**: Safely delete `myenv` and all `__pycache__` folders.             | `env clean`             |
+| `env freeze`    | **Dependency Lock**: Quickly export all packages to `requirements.txt`.          | `env freeze`            |
+| `env update`    | **Power Sync**: Synchronize and upgrade all packages at once.                    | `env update`            |
+| `env version`   | **Smart Info**: Check version & get update notifications.                        | `env version`           |
+| `env uninstall` | **Clean Removal**: Completely remove Env Tool from your system.                  | `env uninstall`         |
+
+---
+
+## 🛠️ Advanced Features
+
+### 1. Smart Update Notifications
+
+Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available.
+
+### 2. Live Progress Monitoring
+
+Powered by **Rich**, Env Tool provides beautiful terminal spinners and status indicators, so you always know exactly what's happening backstage.
+
+### 3. The `--debug` Flag
+
+For power users and contributors. Run any command with `--debug` to get granular logs and full stack traces.
+
+```bash
+env --debug update
+```
 
 ---
 
 ## 🖥️ Usage Guide
 
-### 1. New Project Setup
+### 1. Zero-Config Setup
 
-Navigate to your project folder and simply type:
+Just navigate to any directory and type:
 
 ```bash
 env
 ```
 
-Env Tool will automatically detect your project, create `myenv`, upgrade your tools, and get you ready for code in seconds.
+It handles the venv creation, pip upgrade, and `requirements.txt` installation in one go.
 
-### 2. Freeze Dependencies
+### 2. No-Activation Workflow
 
-Done installing packages? Lock them down:
-
-```bash
-env freeze
-```
-
-### 3. Update Environment
-
-Want the latest versions of your requirements?
+Forget `source myenv/bin/activate`. Just run your code directly:
 
 ```bash
-env update
+env run python main.py
 ```
 
----
+### 3. Reset & Refresh
 
-## 🛠️ Technical Specifications
+Need to clear your local environment files?
 
-- **Powered by Click**: Professional CLI interface with rich error handling.
-- **Venv Standard**: Built on the native `venv` library for maximum stability.
-- **Native Performance**: Light-weight and lightning fast.
-- **Scalable**: Handles everything from tiny scripts to massive mono-repos.
+```bash
+env clean
+```
 
 ---
 
