@@ -1,5 +1,6 @@
 import click
 import sys
+import shutil
 from envtool import core, __version__
 
 @click.group(invoke_without_command=True)
@@ -111,7 +112,7 @@ def version():
     
     if latest and latest != __version__:
         core.console.print(f"\n[bold yellow]🔔 A new version is available: {latest}[/bold yellow]")
-        core.console.print(f"Run [bold cyan]env self-update[/bold cyan] to upgrade.\n")
+        core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
     elif latest == __version__:
         core.console.print("[dim](You are on the latest version)[/dim]\n")
 
@@ -126,21 +127,67 @@ def version():
             core.console.print(f"Environment Python version: {env_ver.stdout.strip()}")
 
 @main.command()
-def self_update():
+def upgrade():
     """Update Env Tool to latest version"""
-    core.console.print("🐍 [bold green]Env Tool - Self Update[/bold green]")
+    core.console.print("🐍 [bold green]Env Tool - Upgrade[/bold green]")
+    
+    with core.console.status("[dim]Checking for updates...", spinner="dots"):
+        latest = core.check_latest_version()
+    
+    if not latest:
+        core.console.print("[yellow]Could not fetch latest version info. Please check your internet connection.[/yellow]")
+        if not click.confirm("Do you want to attempt upgrade anyway?"):
+            return
+    elif latest == __version__:
+        core.console.print(f"[green]You are already on the latest version ({__version__}).[/green]")
+        if not click.confirm("Do you want to reinstall/force-update anyway?"):
+            return
+    else:
+        core.console.print(f"\n[bold blue]Update Found![/bold blue]")
+        core.console.print(f"Current Version: [bold red]{__version__}[/bold red]")
+        core.console.print(f"Latest Version:  [bold green]{latest}[/bold green]\n")
+        if not click.confirm("Proceed with upgrade?"):
+            return
+
     core.console.print("Updating via pip...")
     core.run_command([sys.executable, "-m", "pip", "install", "--upgrade", "env-tool"])
-    core.console.print("✅ [bold green]Update attempted. Please restart your terminal.[/bold green]")
+    core.console.print("✅ [bold green]Upgrade command executed. Please restart your terminal to see changes.[/bold green]")
 
 @main.command()
 def uninstall():
     """Completely remove Env Tool from system"""
     core.console.print("🐍 [bold red]Env Tool - Uninstaller[/bold red]", style="bold red")
-    if click.confirm("Are you sure you want to uninstall Env Tool?"):
-        core.console.print("Uninstalling...")
+    
+    # Try to find where the 'env' command is located
+    env_binary = shutil.which("env")
+    
+    if click.confirm("\n⚠️ This will remove Env Tool and all its shortcuts. Proceed?"):
+        core.console.print("Uninstalling package via pip...", style="dim")
         core.run_command([sys.executable, "-m", "pip", "uninstall", "env-tool", "-y"])
-        core.console.print("✅ [bold green]Env Tool has been uninstalled.[/bold green]")
+        
+        # Manual cleanup for common Windows leftovers
+        if sys.platform == "win32" and env_binary:
+            binary_path = core.Path(env_binary)
+            scripts_dir = binary_path.parent
+            
+            # Common patterns for pip-installed entry points on Windows
+            patterns = ["env.exe", "env-script.py", "env.cmd", "env.ps1"]
+            cleaned = []
+            
+            for p in patterns:
+                file_to_del = scripts_dir / p
+                if file_to_del.exists():
+                    try:
+                        file_to_del.unlink()
+                        cleaned.append(p)
+                    except Exception:
+                        pass # Likely in use or already gone
+            
+            if cleaned:
+                core.console.print(f"🧹 Cleaned leftovers: [dim]{', '.join(cleaned)}[/dim]")
+
+        core.console.print("\n✅ [bold green]Env Tool has been thoroughly uninstalled.[/bold green]")
+        core.console.print("[yellow]Note: You may need to restart your terminal for all changes to take effect.[/yellow]")
     else:
         core.console.print("Uninstall cancelled.")
 
