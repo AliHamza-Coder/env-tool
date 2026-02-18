@@ -3,34 +3,71 @@ import sys
 import shutil
 from envtool import core, __version__
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, context_settings=dict(help_option_names=['-h', '--help']))
 @click.option("--debug", is_flag=True, help="Show full stack Traces and detailed logs")
 @click.pass_context
 def main(ctx, debug):
-    """🐍 Env Tool - Professional Python Virtual Environment Manager"""
+    """🐍 Env Tool - Professional Python Virtual Environment Manager
+    
+    Developed by Ali Hamza
+    """
     core.set_debug(debug)
     
     if ctx.invoked_subcommand is None:
-        # Default behavior: Setup environment
-        core.console.print("\n[bold green]🐍 Env Tool - Setting up Environment[/bold green]")
+        # Default behavior: Setup environment / Toggle
+        core.console.print("\n[bold green]🐍 Env Tool - Context Manager[/bold green]")
+        
+        # Check if already active
+        is_active = core.is_venv_active()
+        
+        if is_active:
+            core.console.print("Status: [bold green]ACTIVE[/bold green]")
+            core.console.print(f"You are currently inside the [bold cyan]{core.ENV_NAME}[/bold cyan] environment.")
+            core.console.print("\n[bold yellow]To Deactivate, run:[/bold yellow]")
+            core.console.print("[bold white]env d[/bold white] (or just type 'deactivate')\n")
+            
+            if not click.confirm("Do you want to re-run the setup flow anyway?", default=False):
+                return
+        else:
+            core.console.print("Status: [bold yellow]INACTIVE[/bold yellow]")
+            core.console.print("Running setup to ensure environment is ready...")
+
         core.create_venv()
         core.upgrade_pip()
         
-        # Dependency confirmation
-        req_file = core.Path.cwd() / "requirements.txt"
-        if req_file.exists() and req_file.stat().st_size > 0:
-            if click.confirm("\n📦 requirements.txt found. Do you want to install dependencies?"):
+        # Ensure req.txt exists and check for dependencies
+        req_file = core.ensure_requirements_exists()
+        
+        if req_file.stat().st_size > 0:
+            if click.confirm("\n📦 requirements.txt found. Do you want to install dependencies?", default=True):
                 core.install_requirements()
-        
-        core.console.print("\n✅ [bold green]Environment Ready and Active.[/bold green]\n")
-        
-        # Activation tip
-        if sys.platform == "win32":
-            core.console.print("Tip: To activate, run: [bold yellow]env a[/bold yellow]")
         else:
-            core.console.print("Tip: To activate, run: [bold yellow]env a[/bold yellow]")
+            core.console.print("[dim]Note: requirements.txt is empty. No dependencies to install.[/dim]")
+        
+        core.console.print("\n✅ [bold green]Environment Ready.[/bold green]")
+        
+        # Activation tip if not active
+        if not is_active:
+            core.console.print("\n[bold yellow]To Activate, run:[/bold yellow]")
+            core.console.print("[bold white]env a[/bold white]\n")
     else:
         pass
+
+@main.command()
+def list():
+    """List all installed packages and their versions"""
+    core.list_dependencies()
+
+@main.command()
+def net():
+    """Check internet connectivity status"""
+    core.display_network_status()
+
+@main.command()
+@click.pass_context
+def help(ctx):
+    """Show this help message and exit"""
+    click.echo(ctx.parent.get_help())
 
 @main.command()
 def a():
@@ -115,6 +152,12 @@ def version():
         core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
     elif latest == __version__:
         core.console.print("[dim](You are on the latest version)[/dim]\n")
+    else:
+        # If latest is None, it could be offline or a server error
+        if not core.is_online():
+            core.console.print("[dim](Version check skipped: Offline)[/dim]\n")
+        else:
+            core.console.print("[dim](Could not reach GitHub for updates)[/dim]\n")
 
     python_ver = core.run_command([sys.executable, "--version"], capture_output=True)
     if python_ver:

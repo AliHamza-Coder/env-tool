@@ -64,6 +64,9 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 | `env clean`     | **Deep Reset**: Safely delete `myenv` and all `__pycache__` folders.             | `env clean`             |
 | `env freeze`    | **Dependency Lock**: Quickly export all packages to `requirements.txt`.          | `env freeze`            |
 | `env update`    | **Power Sync**: Synchronize and upgrade all packages at once.                    | `env update`            |
+| `env list`      | **Inspect**: List all installed packages and their versions.                     | `env list`              |
+| `env help`      | **Guidance**: Explicit command for help (alias: `-h`).                           | `env help`              |
+| `env net`       | **Connection**: Check if your device is Online or Offline.                       | `env net`               |
 | `env version`   | **Smart Info**: Check version & get update notifications.                        | `env version`           |
 | `env upgrade`   | **Auto-Update**: Keep Env Tool itself on the cutting edge.                       | `env upgrade`           |
 | `env uninstall` | **Clean Removal**: Completely remove Env Tool from your system.                  | `env uninstall`         |

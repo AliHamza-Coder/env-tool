@@ -7,6 +7,7 @@ import requests
 from pathlib import Path
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 console = Console()
 ENV_NAME = "myenv"
@@ -155,6 +156,53 @@ def clean_project():
     else:
         console.print("No cache folders found.")
 
+def list_dependencies():
+    """List all installed packages in the current context (venv or global)"""
+    is_active = is_venv_active()
+    context_name = f"Environment: [bold cyan]{ENV_NAME}[/bold cyan]" if is_active else "Environment: [bold yellow]Global (Laptop)[/bold yellow]"
+    
+    python_exe = get_python_exe() if is_active else sys.executable
+    
+    with console.status(f"[dim]Fetching packages for {context_name}...", spinner="dots"):
+        result = run_command([str(python_exe), "-m", "pip", "list", "--format=json"], capture_output=True)
+    
+    if not result:
+        console.print("[red]Failed to retrieve package list.[/red]")
+        return
+
+    import json
+    try:
+        packages = json.loads(result.stdout)
+    except Exception:
+        console.print("[red]Error parsing package list.[/red]")
+        return
+
+    table = Table(title=f"📦 {context_name}", box=None)
+    table.add_column("Package", style="cyan")
+    table.add_column("Version", style="green")
+
+    for pkg in packages:
+        table.add_row(pkg.get("name"), pkg.get("version"))
+
+    console.print("\n")
+    console.print(table)
+    console.print("\n")
+
+def is_venv_active():
+    """Check if the current process is running inside the project's virtual environment"""
+    venv_path = get_venv_path()
+    sys_prefix = Path(sys.prefix).resolve()
+    return sys_prefix == venv_path.resolve()
+
+def ensure_requirements_exists():
+    """Ensure requirements.txt exists, create it if not."""
+    req_file = Path.cwd() / "requirements.txt"
+    if not req_file.exists():
+        req_file.touch()
+        if DEBUG_MODE:
+            console.print("[dim]Created missing requirements.txt[/dim]")
+    return req_file
+
 def init_project():
     dirs = ["src", "tests", "data"]
     created = []
@@ -177,15 +225,38 @@ def init_project():
         console.print("Project already initialized.")
 
 def is_online():
-    """Quick check if internet is accessible"""
-    try:
-        # Check against a reliable public DNS IP (Cloudflare) on port 53
-        import socket
-        socket.create_connection(("1.1.1.1", 53), timeout=2)
-        return True
-    except OSError:
-        pass
+    """Robust check if internet is accessible across different network environments"""
+    # Try different reliable hosts on different ports (DNS and HTTPS)
+    # This helps bypass ISP/Firewall restrictions on specific ports
+    checks = [
+        ("1.1.1.1", 53),     # Cloudflare DNS
+        ("8.8.8.8", 53),     # Google DNS
+        ("google.com", 80),  # HTTP
+        ("github.com", 443), # HTTPS (Target for our updates)
+    ]
+    
+    import socket
+    for host, port in checks:
+        try:
+            socket.create_connection((host, port), timeout=1.5)
+            return True
+        except (OSError, socket.timeout):
+            continue
     return False
+
+def display_network_status():
+    """Check and display the detailed network connectivity status"""
+    console.print("\n🐍 [bold green]Env Tool - Network Status Analysis[/bold green]")
+    
+    with console.status("[dim]Testing multi-source connectivity...", spinner="dots"):
+        online = is_online()
+    
+    if online:
+        console.print("Status: [bold green]ONLINE[/bold green] ✅")
+        console.print("[dim]Your device has a stable connection to our update servers.[/dim]\n")
+    else:
+        console.print("Status: [bold red]OFFLINE[/bold red] ❌")
+        console.print("[yellow]Please connect to the internet to perform upgrades or install dependencies.[/yellow]\n")
 
 def check_latest_version():
     if not is_online():
