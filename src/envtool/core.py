@@ -347,29 +347,40 @@ def is_online(host=None):
             continue
     return False
 
+def get_network_diagnostics():
+    """Run a comprehensive network check and return detailed status."""
+    import socket
+    
+    # Layer 1: DNS/IP Routing
+    dns_ok = False
+    try:
+        socket.create_connection(("1.1.1.1", 53), timeout=1.5)
+        dns_ok = True
+    except: pass
+    
+    # Layer 2: Web Access
+    web_ok = False
+    try:
+        socket.create_connection(("google.com", 80), timeout=1.5)
+        web_ok = True
+    except: pass
+    
+    # Layer 3: GitHub API Specific
+    github_api_ok = is_online("api.github.com")
+    
+    return {
+        "dns": dns_ok,
+        "web": web_ok,
+        "github_api": github_api_ok,
+        "online": dns_ok or web_ok or github_api_ok
+    }
+
 def display_network_status():
     """Check and display a detailed network connectivity breakdown"""
-    console.print("\n🐍 [bold green]Env Tool - Network Diagnostics[/bold green]")
+    console.print("\n[bold green]🐍 Env Tool - Network Diagnostics[/bold green]")
     
     with console.status("[dim]Testing connectivity layers...", spinner="dots"):
-        # Layer 1: DNS/IP Routing
-        import socket
-        dns_ok = False
-        try:
-            socket.create_connection(("1.1.1.1", 53), timeout=1.5)
-            dns_ok = True
-        except: pass
-        
-        # Layer 2: Web Access
-        web_ok = False
-        try:
-            socket.create_connection(("google.com", 80), timeout=1.5)
-            web_ok = True
-        except: pass
-        
-        # Layer 3: GitHub API Specific
-        # We check api.github.com specifically as it's used for updates
-        github_api_ok = is_online("api.github.com")
+        diag = get_network_diagnostics()
 
     # Status Table
     from rich.table import Table
@@ -377,15 +388,15 @@ def display_network_status():
     table.add_column("Service", style="cyan")
     table.add_column("Status", justify="right")
     
-    table.add_row("Global Internet (DNS)", "[green]ONLINE[/green] ✅" if dns_ok else "[red]OFFLINE[/red] ❌")
-    table.add_row("Web Services (HTTP)", "[green]ONLINE[/green] ✅" if web_ok else "[red]OFFLINE[/red] ❌")
-    table.add_row("GitHub API (HTTPS)", "[green]ONLINE[/green] ✅" if github_api_ok else "[red]OFFLINE[/red] ❌")
+    table.add_row("Global Internet (DNS)", "[green]ONLINE[/green] ✅" if diag["dns"] else "[red]OFFLINE[/red] ❌")
+    table.add_row("Web Services (HTTP)", "[green]ONLINE[/green] ✅" if diag["web"] else "[red]OFFLINE[/red] ❌")
+    table.add_row("GitHub API (HTTPS)", "[green]ONLINE[/green] ✅" if diag["github_api"] else "[red]OFFLINE[/red] ❌")
     
     console.print(table)
     
-    if github_api_ok:
+    if diag["github_api"]:
         console.print("\n✨ [bold green]Everything is ready! All services are reachable.[/bold green]\n")
-    elif dns_ok or web_ok:
+    elif diag["online"]:
         console.print("\n⚠️ [bold yellow]Partial Connectivity Detected.[/bold yellow]")
         console.print("[dim]You are online, but the GitHub API appears unreachable. Check your firewall or proxy.[/dim]\n")
     else:
@@ -476,8 +487,9 @@ def remove_global_venv(name=None, remove_all=False):
 
 def check_latest_version():
     """Fetch the latest version tag from GitHub API"""
-    if not is_online("api.github.com"):
-        return "offline"
+    diag = get_network_diagnostics()
+    if not diag["github_api"]:
+        return "offline" if not diag["online"] else "github_unreachable"
         
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     try:
@@ -486,6 +498,8 @@ def check_latest_version():
         if response.status_code == 200:
             data = response.json()
             return data.get("tag_name", "").lstrip("v")
+        elif response.status_code == 404:
+            return "no_release"
         elif response.status_code == 403:
             return "limit"
         else:

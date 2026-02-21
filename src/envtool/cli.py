@@ -267,15 +267,19 @@ def version():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if latest and latest not in ["offline", "limit", "ssl_error", "timeout"] and not latest.startswith("error"):
+    if latest and latest not in ["offline", "limit", "ssl_error", "timeout", "no_release", "github_unreachable"] and not latest.startswith("error") and not latest.startswith("http_error"):
         if latest != __version__:
             core.console.print(f"\n[bold yellow]🔔 A new version is available: {latest}[/bold yellow]")
             core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
         else:
             core.console.print("[dim](You are on the latest version)[/dim]\n")
     else:
-        if latest == "offline":
+        if latest == "no_release":
+            core.console.print("[dim](No releases published on GitHub yet)[/dim]\n")
+        elif latest == "offline":
             core.console.print("[dim](Version check skipped: Offline)[/dim]\n")
+        elif latest == "github_unreachable":
+            core.console.print("[dim](Version check skipped: GitHub API unreachable)[/dim]\n")
         elif latest == "ssl_error":
             core.console.print("[dim](Version check skipped: SSL/Security Error)[/dim]\n")
         elif latest == "limit":
@@ -303,10 +307,16 @@ def upgrade():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if not latest or latest in ["offline", "ssl_error", "limit", "timeout"] or latest.startswith("error") or latest.startswith("http_error"):
-        if latest == "offline":
+    if not latest or latest in ["offline", "ssl_error", "limit", "timeout", "no_release", "github_unreachable"] or latest.startswith("error") or latest.startswith("http_error"):
+        if latest == "no_release":
+            core.console.print("[bold yellow]🔔 No Releases Found[/bold yellow]")
+            core.console.print("[dim]This repository does not have any public releases published yet.[/dim]")
+        elif latest == "offline":
              core.console.print("[bold red]❌ Offline Mode[/bold red]")
              core.console.print("[yellow]You are not connected to the internet.[/yellow]")
+        elif latest == "github_unreachable":
+            core.console.print("[bold red]❌ GitHub Unreachable[/bold red]")
+            core.console.print("[yellow]Your internet is working, but the GitHub API is blocked or down.[/yellow]")
         elif latest == "ssl_error":
             core.console.print("[bold red]❌ Security/SSL Error[/bold red]")
             core.console.print("[yellow]Could not verify secure connection to GitHub. Check your system clock or firewall.[/yellow]")
