@@ -267,19 +267,21 @@ def version():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if latest and latest not in ["ssl_error", "limit"]:
+    if latest and latest not in ["offline", "limit", "ssl_error", "timeout"] and not latest.startswith("error"):
         if latest != __version__:
             core.console.print(f"\n[bold yellow]🔔 A new version is available: {latest}[/bold yellow]")
             core.console.print(f"Run [bold cyan]env upgrade[/bold cyan] to update instantly.\n")
         else:
             core.console.print("[dim](You are on the latest version)[/dim]\n")
     else:
-        if latest == "ssl_error":
+        if latest == "offline":
+            core.console.print("[dim](Version check skipped: Offline)[/dim]\n")
+        elif latest == "ssl_error":
             core.console.print("[dim](Version check skipped: SSL/Security Error)[/dim]\n")
         elif latest == "limit":
             core.console.print("[dim](Version check skipped: GitHub API Rate Limit)[/dim]\n")
-        elif not core.is_online():
-            core.console.print("[dim](Version check skipped: Offline)[/dim]\n")
+        elif latest == "timeout":
+            core.console.print("[dim](Version check skipped: Request Timeout)[/dim]\n")
         else:
             core.console.print("[dim](Could not reach GitHub for updates)[/dim]\n")
 
@@ -301,16 +303,23 @@ def upgrade():
     with core.console.status("[dim]Checking for updates...", spinner="dots"):
         latest = core.check_latest_version()
     
-    if not latest or latest in ["ssl_error", "limit"]:
-        if latest == "ssl_error":
+    if not latest or latest in ["offline", "ssl_error", "limit", "timeout"] or latest.startswith("error") or latest.startswith("http_error"):
+        if latest == "offline":
+             core.console.print("[bold red]❌ Offline Mode[/bold red]")
+             core.console.print("[yellow]You are not connected to the internet.[/yellow]")
+        elif latest == "ssl_error":
             core.console.print("[bold red]❌ Security/SSL Error[/bold red]")
             core.console.print("[yellow]Could not verify secure connection to GitHub. Check your system clock or firewall.[/yellow]")
         elif latest == "limit":
             core.console.print("[bold yellow]🔔 Rate Limit Reached[/bold yellow]")
             core.console.print("[dim]GitHub API is temporarily limiting requests. Try again in a few minutes.[/dim]")
+        elif latest == "timeout":
+            core.console.print("[bold red]❌ Request Timeout[/bold red]")
+            core.console.print("[yellow]The request to GitHub timed out. Connection may be too slow.[/yellow]")
         else:
-            core.console.print("[bold red]❌ Network Error[/bold red]")
-            core.console.print("[yellow]Please connect to the internet to check for updates and upgrade Env Tool.[/yellow]")
+            core.console.print("[bold red]❌ Connection Error[/bold red]")
+            error_m = latest.split(":", 1)[1] if latest and ":" in latest else latest
+            core.console.print(f"[yellow]Could not reach GitHub updates: {error_m}[/yellow]")
         
         if not click.confirm("\nAttempt force-upgrade anyway?"):
             return

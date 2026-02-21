@@ -321,21 +321,27 @@ def init_project():
     else:
         console.print("Project already initialized.")
 
-def is_online(target="github.com"):
-    """Robust check if internet is accessible. Optionally checks a specific target."""
+def is_online(host=None):
+    """Robust check if internet is accessible. If a host is provided, it checks specifically for that host."""
     import socket
     
-    # Quick port checks (DNS/HTTP/HTTPS)
+    if host:
+        try:
+            socket.create_connection((host, 443), timeout=2.0)
+            return True
+        except (OSError, socket.timeout):
+            return False
+            
+    # General check: try reliable DNS or Web hosts
     checks = [
         ("1.1.1.1", 53),     # Cloudflare DNS
         ("8.8.8.8", 53),     # Google DNS
         ("google.com", 80),  # HTTP
-        (target, 443),       # HTTPS to target
     ]
     
-    for host, port in checks:
+    for h, p in checks:
         try:
-            socket.create_connection((host, port), timeout=1.5)
+            socket.create_connection((h, p), timeout=1.5)
             return True
         except (OSError, socket.timeout):
             continue
@@ -346,24 +352,24 @@ def display_network_status():
     console.print("\n🐍 [bold green]Env Tool - Network Diagnostics[/bold green]")
     
     with console.status("[dim]Testing connectivity layers...", spinner="dots"):
+        # Layer 1: DNS/IP Routing
+        import socket
         dns_ok = False
         try:
-            import socket
             socket.create_connection(("1.1.1.1", 53), timeout=1.5)
             dns_ok = True
         except: pass
         
+        # Layer 2: Web Access
         web_ok = False
         try:
             socket.create_connection(("google.com", 80), timeout=1.5)
             web_ok = True
         except: pass
         
-        github_ok = False
-        try:
-            socket.create_connection(("github.com", 443), timeout=1.5)
-            github_ok = True
-        except: pass
+        # Layer 3: GitHub API Specific
+        # We check api.github.com specifically as it's used for updates
+        github_api_ok = is_online("api.github.com")
 
     # Status Table
     from rich.table import Table
@@ -373,15 +379,15 @@ def display_network_status():
     
     table.add_row("Global Internet (DNS)", "[green]ONLINE[/green] ✅" if dns_ok else "[red]OFFLINE[/red] ❌")
     table.add_row("Web Services (HTTP)", "[green]ONLINE[/green] ✅" if web_ok else "[red]OFFLINE[/red] ❌")
-    table.add_row("GitHub API (HTTPS)", "[green]ONLINE[/green] ✅" if github_ok else "[red]OFFLINE[/red] ❌")
+    table.add_row("GitHub API (HTTPS)", "[green]ONLINE[/green] ✅" if github_api_ok else "[red]OFFLINE[/red] ❌")
     
     console.print(table)
     
-    if github_ok:
+    if github_api_ok:
         console.print("\n✨ [bold green]Everything is ready! All services are reachable.[/bold green]\n")
     elif dns_ok or web_ok:
         console.print("\n⚠️ [bold yellow]Partial Connectivity Detected.[/bold yellow]")
-        console.print("[dim]You are online, but GitHub appears unreachable. Check your firewall/VPN.[/dim]\n")
+        console.print("[dim]You are online, but the GitHub API appears unreachable. Check your firewall or proxy.[/dim]\n")
     else:
         console.print("\n❌ [bold red]Offline Mode.[/bold red]")
         console.print("[dim]Please connect to a network to perform upgrades.[/dim]\n")
@@ -471,23 +477,25 @@ def remove_global_venv(name=None, remove_all=False):
 def check_latest_version():
     """Fetch the latest version tag from GitHub API"""
     if not is_online("api.github.com"):
-        return None
+        return "offline"
         
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     try:
-        # Using a browser-like user agent can sometimes bypass simple filters
         headers = {"User-Agent": "EnvTool-CLI-Updater"}
         response = requests.get(url, timeout=5, headers=headers)
         if response.status_code == 200:
             data = response.json()
             return data.get("tag_name", "").lstrip("v")
         elif response.status_code == 403:
-            if DEBUG_MODE: console.print("[dim]GitHub API Rate limit exceeded.[/dim]")
             return "limit"
+        else:
+            return f"http_error_{response.status_code}"
     except requests.exceptions.SSLError:
-        if DEBUG_MODE: console.print("[dim]SSL Verification failed.[/dim]")
         return "ssl_error"
+    except requests.exceptions.Timeout:
+        return "timeout"
     except Exception as e:
         if DEBUG_MODE:
             console.print(f"[dim]Version check failed: {e}[/dim]")
+        return f"error:{str(e)}"
     return None
