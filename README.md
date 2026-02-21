@@ -3,7 +3,7 @@
   <img src="https://img.shields.io/github/languages/code-size/AliHamza-Coder/env-tool?color=green&style=for-the-badge" alt="Code Size" />
   <img src="https://img.shields.io/github/last-commit/AliHamza-Coder/env-tool?color=orange&style=for-the-badge" alt="Last Commit" />
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=for-the-badge" alt="Platform" />
-  <img src="https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge" alt="Version" />
+  <img src="https://img.shields.io/badge/version-1.4.0-blue?style=for-the-badge" alt="Version" />
 </div>
 
 <br />
@@ -52,24 +52,116 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 
 ---
 
-## 🎯 Commands
+### 🌍 Global Environment Management
 
-| Command         | Description                                                                      | Usage                   |
-| --------------- | -------------------------------------------------------------------------------- | ----------------------- |
-| `env`           | **Magic Setup**: Creates venv, upgrades pip, and alerts for dependencies.        | `env`                   |
-| `env a`         | **Activate**: Get the activation command for your current shell.                 | `env a`                 |
-| `env d`         | **Deactivate**: Get the deactivation command.                                    | `env d`                 |
-| `env run`       | **Direct Execute**: Run any command inside the venv without activating.          | `env run python app.py` |
-| `env init`      | **Project Bootstrap**: Automatically creates `src/`, `tests/`, and `.gitignore`. | `env init`              |
-| `env clean`     | **Deep Reset**: Safely delete `myenv` and all `__pycache__` folders.             | `env clean`             |
-| `env freeze`    | **Dependency Lock**: Quickly export all packages to `requirements.txt`.          | `env freeze`            |
-| `env update`    | **Power Sync**: Synchronize and upgrade all packages at once.                    | `env update`            |
-| `env list`      | **Inspect**: List all installed packages and their versions.                     | `env list`              |
-| `env help`      | **Guidance**: Explicit command for help (alias: `-h`).                           | `env help`              |
-| `env net`       | **Connection**: Check if your device is Online or Offline.                       | `env net`               |
-| `env version`   | **Smart Info**: Check version & get update notifications.                        | `env version`           |
-| `env upgrade`   | **Auto-Update**: Keep Env Tool itself on the cutting edge.                       | `env upgrade`           |
-| `env uninstall` | **Clean Removal**: Completely remove Env Tool from your system.                  | `env uninstall`         |
+Save space by sharing virtual environments across multiple projects.
+
+| Command            | Action                                                         | Example                |
+| :----------------- | :------------------------------------------------------------- | :--------------------- |
+| **`env g list`**   | **Storefront**: View all centrally stored global environments. | `env g list`           |
+| **`env g create`** | **Birth**: Create a new venv in the central master store.      | `env g create web-dev` |
+| **`env g use`**    | **Link**: Connect your current project to a global venv.       | `env g use web-dev`    |
+| **`env g clean`**  | **Purge**: Delete specific or all global environments.         | `env g clean --all`    |
+
+### 🛠️ Core Commands
+
+| Command          | Description                                                                      | Usage                   |
+| ---------------- | -------------------------------------------------------------------------------- | ----------------------- |
+| `env`            | **Magic Setup**: Creates venv, upgrades pip, and alerts for dependencies.        | `env`                   |
+| `env a`          | **Activate**: Get the activation command for your current shell.                 | `env a`                 |
+| `env d`          | **Deactivate**: Get the deactivation command.                                    | `env d`                 |
+| `env run`        | **Execute**: Run code inside venv (supports **Shell & .env**).                   | `env run --shell "..."` |
+| `env init`       | **Project Bootstrap**: Automatically creates `src/`, `tests/`, and `.gitignore`. | `env init`              |
+| `env clean`      | **Deep Reset**: Safely delete `myenv` and all `__pycache__` folders.             | `env clean`             |
+| `env list`       | **Inspect**: List packages or view a **Hierarchy Tree**.                         | `env list --tree`       |
+| `env freeze`     | **Dependency Lock**: Quickly export all packages to `requirements.txt`.          | `env freeze`            |
+| `env update`     | **Power Sync**: Synchronize and upgrade all packages at once.                    | `env update`            |
+| `env completion` | **Setup**: Enable Tab-Completion for your terminal.                              | `env completion`        |
+| `env help`       | **Guidance**: Pro-grade command reference.                                       | `env help`              |
+| `env net`        | **Connection**: Check if your device is Online or Offline.                       | `env net`               |
+| `env version`    | **Smart Info**: Check version & get update notifications.                        | `env version`           |
+| `env upgrade`    | **Auto-Update**: Keep Env Tool itself on the cutting edge.                       | `env upgrade`           |
+| `env uninstall`  | **Safe Removal**: Securely remove Env Tool from your system.                     | `env uninstall`         |
+
+---
+
+## 📂 Path Configuration Guide
+
+**Env Tool** is smart about how it finds your environments.
+
+### 1. Smart Detection (New!)
+
+When you run `env`, it automatically looks for existing environments in your project. It prioritizes them in this order:
+
+1.  **Linked**: Via `.envlink` file.
+2.  **Standards**: Any folder named `.venv`, `venv`, `env`, or `myenv`.
+3.  **Creation**: If none found, it creates `myenv`.
+
+---
+
+## ⚡ Power Features (v1.4.0)
+
+### 1. Dependency Tree
+
+Visualize your project structure instantly:
+
+```bash
+env list --tree
+```
+
+### 2. Shell Execution & Scaling
+
+Need to use pipes (`|`) or redirects (`>`)? Use the `--shell` flag:
+
+```bash
+env run --shell "python app.py | grep 'Error' > log.txt"
+```
+
+### 3. Environment Variables
+
+Env Tool automatically loads your **`.env`** file before running any command via `env run`. No extra config needed.
+
+### 4. Custom Python Runtime
+
+Want to use a specific Python version for your venv?
+
+```bash
+env --python 3.10
+```
+
+### 5. Tab Completion
+
+Tired of typing? Set up completion:
+
+```bash
+env completion
+```
+
+---
+
+### Understanding Environment Paths
+
+Here is how the paths look in different scenarios:
+
+### 1. Local Environment (The Default)
+
+When you run `env`, it creates a folder named `myenv` inside your project.
+
+- **Project Path**: `C:\Projects\Alpha\`
+- **Venv Path**: `C:\Projects\Alpha\myenv\`
+- **Best for**: Single-use projects or projects with very specific dependencies.
+
+### 2. Global Environment (The Power User Way)
+
+When you use a global environment, your project folder stays clean.
+
+- **Global Store**: `C:\Users\Hamza\.envtool\envs\shared-env\`
+- **Your Project**: `D:\Work\Beta\`
+- **The Connection**: A hidden `.envlink` file inside `D:\Work\Beta\` tells the tool: _"Use the venv at C:\Users\Hamza\.envtool\envs\shared-env"_.
+- **Best for**: Saving disk space on your laptop or working across different drives (C:, D:, USB).
+
+> [!TIP]
+> **Switching is Easy**: If you already have a local `myenv` but want to switch to global, just run `env g use <name>`. The tool will prioritize the link!
 
 ---
 
@@ -77,11 +169,11 @@ Env Tool automates the tedious parts of Python development. Whether you're on Wi
 
 ### 1. Smart Update Notifications
 
-Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available, even with robust offline handling.
+Env Tool keeps itself and your project on the cutting edge. It automatically pings GitHub for updates and alerts you if a newer version is available.
 
 ### 2. Offline Ready
 
-Env Tool is designed for developers on the move. Most features (venv creation, project init, clean, run) work perfectly offline. Network tasks like version checks and pip upgrades are gracefully skipped if no connection is detected.
+Env Tool is designed for developers on the move. Most features (venv creation, project init, clean, run) work perfectly offline. Network tasks like version checks are gracefully handled.
 
 ### 3. Live Progress Monitoring
 

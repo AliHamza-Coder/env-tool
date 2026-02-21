@@ -13,13 +13,36 @@ console = Console()
 ENV_NAME = "myenv"
 DEBUG_MODE = False
 GITHUB_REPO = "AliHamza-Coder/env-tool"
+GLOBAL_ENV_BASE = Path.home() / ".envtool" / "envs"
 
 def set_debug(enabled):
     global DEBUG_MODE
     DEBUG_MODE = enabled
 
 def get_venv_path():
-    return Path.cwd() / ENV_NAME
+    """Get the path to the virtual environment, checking for local, linked, or common default names."""
+    # 1. Check for .envlink (Global Link) - Highest Priority
+    link_file = Path.cwd() / ".envlink"
+    if link_file.exists():
+        try:
+            target_path = Path(link_file.read_text().strip())
+            if target_path.exists():
+                return target_path
+        except Exception:
+            pass
+
+    # 2. Smart Detection: Search for common venv names
+    common_names = [ENV_NAME, ".venv", "venv", "env"]
+    for name in common_names:
+        local_path = Path.cwd() / name
+        # Check if it's a directory and looks like a venv (contains python binary)
+        if local_path.is_dir():
+            if sys.platform == "win32":
+                if (local_path / "Scripts" / "python.exe").exists(): return local_path
+            else:
+                if (local_path / "bin" / "python").exists(): return local_path
+        
+    return Path.cwd() / ENV_NAME # Fallback to default name
 
 def get_python_exe():
     venv_path = get_venv_path()
@@ -82,9 +105,22 @@ def install_requirements():
             console.print("[yellow]Please connect to the internet to install dependencies from requirements.txt.[/yellow]")
             return
             
+        # UI: Show what's in req.txt first
+        with open(req_file, "r") as f:
+            lines = [l.strip() for l in f.readlines() if l.strip() and not l.startswith("#")]
+        
+        console.print("\n[bold cyan]📦 Dependency Plan:[/bold cyan]")
+        for l in lines[:10]: console.print(f" [dim]•[/dim] {l}")
+        if len(lines) > 10: console.print(f" [dim]... and {len(lines)-10} more[/dim]")
+        console.print("")
+
         with console.status("[bold yellow]Installing dependencies...", spinner="dots"):
             pip_exe = get_pip_exe()
+            # We run without capture_output to let Pip's progress bars show up if it's an interactive TTY
+            # or just to see real-time log.
             run_command([str(pip_exe), "install", "-r", str(req_file)])
+        
+        console.print("✅ [bold green]Packages installed correctly.[/bold green]")
     else:
         console.print("[yellow]requirements.txt is empty. Skipping install.[/yellow]")
 
@@ -95,10 +131,21 @@ def freeze_dependencies():
     
     try:
         with console.status("[bold yellow]Freezing dependencies...", spinner="dots"):
+            # Preserve comments from existing requirements.txt
+            comments = []
+            req_file = Path.cwd() / "requirements.txt"
+            if req_file.exists():
+                with open(req_file, "r") as f:
+                    comments = [line for line in f.readlines() if line.strip().startswith("#")]
+
             result = run_command([str(pip_exe), "freeze"], capture_output=True)
             if result:
                 with open("requirements.txt", "w") as f:
+                    if comments:
+                        f.writelines(comments)
+                        f.write("\n")
                     f.write(result.stdout)
+                
                 count = len(result.stdout.strip().split("\n")) if result.stdout.strip() else 0
                 return True, f"Dependencies frozen to requirements.txt ({count} packages)"
     except Exception as e:
@@ -118,7 +165,10 @@ def update_dependencies():
     if req_file.stat().st_size == 0:
         return True, "requirements.txt is empty. Nothing to update."
     
-    with console.status("[bold yellow]Updating dependencies...", spinner="dots"):
+    console.print("\n[bold yellow]🔄 Updating Environment Packages...[/bold yellow]")
+    console.print("[dim]This will synchronize all packages with requirements.txt and upgrade to latest allowed versions.[/dim]\n")
+
+    with console.status("[bold yellow]Updating...", spinner="dots"):
         result = run_command([str(pip_exe), "install", "--upgrade", "-r", str(req_file)])
         if result:
             return True, "Environment updated successfully."
@@ -130,21 +180,51 @@ def run_in_venv(args):
         console.print("[bold red]Venv not detected.[/bold red] Run 'env' to create one first.")
         return
     
+    # Load .env variables if present
+    load_env()
+
     # If the command is 'python', replace it with venv python
     if args[0] == "python":
         args[0] = str(python_exe)
     
     run_command(args)
 
-def clean_project():
-    # Remove venv
-    venv_path = get_venv_path()
-    if venv_path.exists():
-        with console.status(f"[bold red]Deleting {ENV_NAME}...", spinner="dots"):
-            shutil.rmtree(venv_path)
-        console.print(f"✅ Removed [bold]{ENV_NAME}[/bold]")
+def load_env():
+    """Load variables from a .env file into the environment if it exists."""
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        try:
+            for line in env_file.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key.strip()] = value.strip().strip('"').strip("'")
+            if DEBUG_MODE:
+                console.print("[dim]Loaded .env environment variables.[/dim]")
+        except Exception as e:
+            if DEBUG_MODE: console.print(f"[dim]Failed to load .env: {e}[/dim]")
 
-    # Remove __pycache__
+def clean_project():
+    # 1. Handle Global Link (.envlink)
+    link_file = Path.cwd() / ".envlink"
+    if link_file.exists():
+        try:
+            link_file.unlink()
+            console.print("✅ Removed project link to global environment ([dim].envlink[/dim])")
+        except Exception as e:
+            console.print(f"[red]Error removing link file:[/red] {e}")
+
+    # 2. Handle Local Venv
+    local_venv = Path.cwd() / ENV_NAME
+    if local_venv.exists():
+        with console.status(f"[bold red]Deleting {ENV_NAME}...", spinner="dots"):
+            shutil.rmtree(local_venv)
+        console.print(f"✅ Removed local venv [bold]{ENV_NAME}[/bold]")
+    else:
+        if not link_file.exists():
+            console.print("No local environment or link found.")
+
+    # 3. Remove __pycache__
     deleted_caches = 0
     with console.status("[bold red]Cleaning __pycache__ folders...", spinner="dots"):
         for p in Path.cwd().rglob("__pycache__"):
@@ -189,10 +269,20 @@ def list_dependencies():
     console.print("\n")
 
 def is_venv_active():
-    """Check if the current process is running inside the project's virtual environment"""
+    """Check if the current process or the calling shell is running inside the project's virtual environment"""
     venv_path = get_venv_path()
+    
+    # 1. Check the current process prefix
     sys_prefix = Path(sys.prefix).resolve()
-    return sys_prefix == venv_path.resolve()
+    if sys_prefix == venv_path.resolve():
+        return True
+    
+    # 2. Check the shell's VIRTUAL_ENV variable
+    shell_venv = os.environ.get("VIRTUAL_ENV")
+    if shell_venv:
+        return Path(shell_venv).resolve() == venv_path.resolve()
+        
+    return False
 
 def ensure_requirements_exists():
     """Ensure requirements.txt exists, create it if not."""
@@ -216,8 +306,15 @@ def init_project():
     gitignore = Path.cwd() / ".gitignore"
     if not gitignore.exists():
         with open(gitignore, "w") as f:
-            f.write("__pycache__/\n*.py[cod]\nmyenv/\n.env\n.vscode/\n")
+            f.write("__pycache__/\n*.py[cod]\nmyenv/\n.venv/\nvenv/\nenv/\n.env\n.envlink\n.vscode/\n")
         created.append(".gitignore")
+    else:
+        # Update existing gitignore with .envlink if missing
+        content = gitignore.read_text()
+        if ".envlink" not in content:
+            with open(gitignore, "a") as f:
+                f.write("\n# Env Tool\n.envlink\n")
+            created.append(".envlink (added to .gitignore)")
     
     if created:
         console.print(f"✅ Created: [bold]{', '.join(created)}[/bold]")
@@ -288,6 +385,88 @@ def display_network_status():
     else:
         console.print("\n❌ [bold red]Offline Mode.[/bold red]")
         console.print("[dim]Please connect to a network to perform upgrades.[/dim]\n")
+
+# --- Global Environment Management ---
+
+def create_global_venv(name):
+    """Create a virtual environment in the global central store"""
+    if not GLOBAL_ENV_BASE.exists():
+        GLOBAL_ENV_BASE.mkdir(parents=True, exist_ok=True)
+    
+    target_path = GLOBAL_ENV_BASE / name
+    if target_path.exists():
+        console.print(f"[yellow]Global environment '{name}' already exists.[/yellow]")
+        return False
+    
+    with console.status(f"[bold yellow]Creating global environment: {name}...", spinner="dots"):
+        venv.create(target_path, with_pip=True)
+    
+    console.print(f"✅ Global environment [bold cyan]{name}[/bold cyan] created at {target_path}")
+    return True
+
+def list_global_envs():
+    """List all centrally stored virtual environments"""
+    if not GLOBAL_ENV_BASE.exists() or not any(GLOBAL_ENV_BASE.iterdir()):
+        console.print("[dim]No global environments found.[/dim]")
+        return
+    
+    table = Table(title="🌍 [bold green]Global Environments[/bold green]", box=None)
+    table.add_column("Name", style="cyan")
+    table.add_column("Size", style="dim")
+    table.add_column("Path", style="dim")
+    
+    for venv_dir in GLOBAL_ENV_BASE.iterdir():
+        if venv_dir.is_dir():
+            # Rough size calculation
+            size = sum(f.stat().st_size for f in venv_dir.rglob('*') if f.is_file())
+            size_mb = f"{size / (1024 * 1024):.1f} MB"
+            table.add_row(venv_dir.name, size_mb, str(venv_dir))
+            
+    console.print(table)
+
+def link_project_to_global(name):
+    """Link the current directory to a global virtual environment"""
+    target_path = GLOBAL_ENV_BASE / name
+    if not target_path.exists():
+        console.print(f"[bold red]Global environment '{name}' does not exist.[/bold red]")
+        console.print("Run [bold cyan]env g create " + name + "[/bold cyan] first.")
+        return False
+    
+    link_file = Path.cwd() / ".envlink"
+    link_file.write_text(str(target_path.resolve()))
+    console.print(f"✅ Project linked to global environment: [bold cyan]{name}[/bold cyan]")
+    return True
+
+def remove_global_venv(name=None, remove_all=False):
+    """Remove one or all global environments"""
+    if not GLOBAL_ENV_BASE.exists():
+        return
+    
+    if remove_all:
+        with console.status("[bold red]Deleting all global environments...", spinner="dots"):
+            shutil.rmtree(GLOBAL_ENV_BASE)
+            GLOBAL_ENV_BASE.mkdir()
+        console.print("✅ [bold green]All global environments cleared.[/bold green]")
+        return
+    
+    if name:
+        # Path Injection Protection
+        if ".." in name or "/" in name or "\\" in name:
+            console.print(f"[bold red]Error:[/bold red] Invalid environment name '{name}'.")
+            return
+            
+        target_path = (GLOBAL_ENV_BASE / name).resolve()
+        # Verify it's actually within the GLOBAL_ENV_BASE
+        if not str(target_path).startswith(str(GLOBAL_ENV_BASE.resolve())):
+            console.print(f"[bold red]Error:[/bold red] Security violation. Path outside of global store.")
+            return
+
+        if target_path.exists():
+            with console.status(f"[bold red]Deleting global env {name}...", spinner="dots"):
+                shutil.rmtree(target_path)
+            console.print(f"✅ Global environment [bold]{name}[/bold] removed.")
+        else:
+            console.print(f"[red]Global environment '{name}' not found.[/red]")
 
 def check_latest_version():
     """Fetch the latest version tag from GitHub API"""

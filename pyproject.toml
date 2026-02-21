@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "env-tool"
-version = "1.2.0"
+version = "1.4.0"
 description = "Professional Python Virtual Environment Manager"
 readme = "README.md"
 authors = [{ name = "Ali Hamza" }]
